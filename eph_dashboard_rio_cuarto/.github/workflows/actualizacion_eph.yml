@@ -1,0 +1,46 @@
+name: Actualizacion trimestral EPH Rio Cuarto
+
+on:
+  schedule:
+    # Corre el dia 5 de febrero, mayo, agosto y noviembre a las 12:00 UTC.
+    # INDEC suele publicar cada trimestre ~45-60 dias despues de cerrado,
+    # asi que estas fechas cubren la publicacion con margen. El script
+    # 00_descarga.R es idempotente: si todavia no salio el dato nuevo,
+    # simplemente no encuentra nada para descargar y no rompe nada.
+    - cron: '0 12 5 2,5,8,11 *'
+  workflow_dispatch: {}  # permite tambien correrlo a mano desde GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+
+      - name: Cache de paquetes R
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: r-pkgs-${{ runner.os }}-${{ hashFiles('scripts/**/*.R') }}
+          restore-keys: r-pkgs-${{ runner.os }}-
+
+      - name: Instalar dependencias R
+        run: |
+          Rscript -e 'install.packages(c("eph", "dplyr", "jsonlite"), repos = "https://cloud.r-project.org")'
+
+      - name: Correr pipeline completo
+        run: Rscript scripts/orquestador.R
+
+      - name: Commitear datos y dashboard actualizados
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Actualizacion automatica EPH ${{ github.run_id }}"
+          file_pattern: "data/** metodologia/** docs/data.json"

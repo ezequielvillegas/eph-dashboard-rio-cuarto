@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPH Río Cuarto — Panel histórico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --azul: #1c4e80;
+    --azul-claro: #6a9fd8;
+    --gris: #6b7280;
+    --gris-claro: #e5e7eb;
+    --ambar: #c9820a;
+    --fondo: #f7f7f5;
+    --texto: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    margin: 0;
+    padding: 24px;
+  }
+  .contenedor {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  header {
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .subtitulo {
+    color: var(--gris);
+    font-size: 14px;
+  }
+  .aviso-quiebre {
+    background: #fdf3e2;
+    border-left: 3px solid var(--ambar);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #6b4e0e;
+    margin: 16px 0 20px;
+    border-radius: 0 4px 4px 0;
+  }
+  .tarjeta {
+    background: #fff;
+    border: 1px solid var(--gris-claro);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .tarjeta h2 {
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0 0 12px;
+  }
+  .grafico {
+    width: 100%;
+    height: 340px;
+  }
+  .selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .selector button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--gris-claro);
+    background: #fff;
+    color: var(--texto);
+    cursor: pointer;
+  }
+  .selector button.activo {
+    background: var(--azul);
+    color: #fff;
+    border-color: var(--azul);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gris-claro);
+  }
+  th {
+    color: var(--gris);
+    font-weight: 500;
+  }
+  .pie {
+    font-size: 12px;
+    color: var(--gris);
+    text-align: right;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header>
+    <h1>EPH — Río Cuarto (aglomerado 33)</h1>
+    <div class="subtitulo" id="fecha-actualizacion">Cargando datos…</div>
+  </header>
+
+  <div class="aviso-quiebre" id="aviso-rupturas"></div>
+
+  <div class="tarjeta">
+    <h2>Evolución trimestral</h2>
+    <div class="selector" id="selector-indicador"></div>
+    <div class="grafico" id="grafico-principal"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Registro de cambios metodológicos</h2>
+    <table id="tabla-changelog">
+      <thead>
+        <tr><th>Período</th><th>Base</th><th>Tipo</th><th>Detalle</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="pie" id="pie-changelog"></div>
+  </div>
+</div>
+
+<script>
+let datos = null;
+let indicadorActual = null;
+let grafico = null;
+
+fetch('./data.json')
+  .then(r => r.json())
+  .then(json => { datos = json; inicializar(); })
+  .catch(err => {
+    document.getElementById('fecha-actualizacion').textContent =
+      'No se pudo cargar data.json (' + err + ')';
+  });
+
+function inicializar() {
+  document.getElementById('fecha-actualizacion').textContent =
+    'Última actualización: ' + datos.actualizado;
+
+  // Detecta que columnas son indicadores numericos (todo lo que no es
+  // ANO4, TRIMESTRE, periodo o quiebre_metodologico)
+  const excluidas = new Set(['ANO4', 'TRIMESTRE', 'periodo', 'quiebre_metodologico']);
+  const columnas = datos.panel.length ? Object.keys(datos.panel[0]) : [];
+  const indicadores = columnas.filter(c => !excluidas.has(c));
+
+  const selector = document.getElementById('selector-indicador');
+  indicadores.forEach((ind, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = ind.replace(/_/g, ' ');
+    btn.onclick = () => seleccionarIndicador(ind, btn);
+    selector.appendChild(btn);
+    if (i === 0) seleccionarIndicador(ind, btn);
+  });
+
+  // Aviso de rupturas conocidas
+  const avisoEl = document.getElementById('aviso-rupturas');
+  if (datos.rupturas_conocidas && datos.rupturas_conocidas.length) {
+    avisoEl.innerHTML = datos.rupturas_conocidas.map(r =>
+      '<strong>Quiebre ' + r.periodo + '</strong>: ' + r.descripcion
+    ).join('<br>');
+  } else {
+    avisoEl.style.display = 'none';
+  }
+
+  // Tabla de changelog
+  const tbody = document.querySelector('#tabla-changelog tbody');
+  if (datos.changelog && datos.changelog.length) {
+    datos.changelog.forEach(c => {
+      const fila = document.createElement('tr');
+      fila.innerHTML =
+        '<td>' + c.periodo + '</td>' +
+        '<td>' + c.tipo_base + '</td>' +
+        '<td>' + c.tipo_cambio + '</td>' +
+        '<td>' + c.detalle + '</td>';
+      tbody.appendChild(fila);
+    });
+    document.getElementById('pie-changelog').textContent =
+      datos.changelog.length + ' cambio(s) detectado(s) automáticamente entre trimestres consecutivos.';
+  } else {
+    tbody.innerHTML = '<tr><td colspan="4">Sin cambios detectados hasta el momento.</td></tr>';
+  }
+}
+
+function seleccionarIndicador(indicador, boton) {
+  indicadorActual = indicador;
+  document.querySelectorAll('#selector-indicador button').forEach(b => b.classList.remove('activo'));
+  boton.classList.add('activo');
+  dibujarGrafico();
+}
+
+function dibujarGrafico() {
+  if (!grafico) {
+    grafico = echarts.init(document.getElementById('grafico-principal'));
+    window.addEventListener('resize', () => grafico.resize());
+  }
+
+  const panel = datos.panel;
+  const periodos = panel.map(p => p.periodo);
+  const valores = panel.map(p => p[indicadorActual]);
+
+  // Franja gris para el tramo previo al quiebre metodologico de 2016-T2
+  const idxQuiebre = panel.findIndex(p => !p.quiebre_metodologico);
+  const marcas = [];
+  if (idxQuiebre > 0) {
+    marcas.push([
+      { xAxis: periodos[0] },
+      { xAxis: periodos[idxQuiebre] }
+    ]);
+  }
+
+  grafico.setOption({
+    grid: { left: 48, right: 20, top: 20, bottom: 40 },
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: periodos,
+      axisLabel: { fontSize: 11, rotate: 45 }
+    },
+    yAxis: { type: 'value', axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'line',
+      data: valores,
+      smooth: false,
+      symbolSize: 6,
+      lineStyle: { width: 2, color: '#1c4e80' },
+      itemStyle: { color: '#1c4e80' },
+      markArea: {
+        silent: true,
+        itemStyle: { color: 'rgba(107,114,128,0.12)' },
+        data: marcas
+      }
+    }]
+  });
+}
+</script>
+</body>
+</html>

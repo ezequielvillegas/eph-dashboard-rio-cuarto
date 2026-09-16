@@ -1,0 +1,21 @@
+{
+  "actualizado": "2026-09-12 00:00:00 (datos de ejemplo)",
+  "panel": [
+    {"ANO4": 2015, "TRIMESTRE": 3, "periodo": "2015-T3", "tasa_pobreza": 24.1, "tasa_desocupacion": 8.4, "quiebre_metodologico": true},
+    {"ANO4": 2015, "TRIMESTRE": 4, "periodo": "2015-T4", "tasa_pobreza": 23.5, "tasa_desocupacion": 8.1, "quiebre_metodologico": true},
+    {"ANO4": 2016, "TRIMESTRE": 1, "periodo": "2016-T1", "tasa_pobreza": 25.8, "tasa_desocupacion": 9.3, "quiebre_metodologico": true},
+    {"ANO4": 2016, "TRIMESTRE": 2, "periodo": "2016-T2", "tasa_pobreza": 27.3, "tasa_desocupacion": 9.9, "quiebre_metodologico": false},
+    {"ANO4": 2016, "TRIMESTRE": 3, "periodo": "2016-T3", "tasa_pobreza": 26.9, "tasa_desocupacion": 9.6, "quiebre_metodologico": false},
+    {"ANO4": 2017, "TRIMESTRE": 1, "periodo": "2017-T1", "tasa_pobreza": 25.4, "tasa_desocupacion": 9.1, "quiebre_metodologico": false},
+    {"ANO4": 2019, "TRIMESTRE": 3, "periodo": "2019-T3", "tasa_pobreza": 30.2, "tasa_desocupacion": 10.5, "quiebre_metodologico": false},
+    {"ANO4": 2021, "TRIMESTRE": 2, "periodo": "2021-T2", "tasa_pobreza": 33.1, "tasa_desocupacion": 11.2, "quiebre_metodologico": false},
+    {"ANO4": 2023, "TRIMESTRE": 4, "periodo": "2023-T4", "tasa_pobreza": 31.5, "tasa_desocupacion": 9.8, "quiebre_metodologico": false},
+    {"ANO4": 2025, "TRIMESTRE": 2, "periodo": "2025-T2", "tasa_pobreza": 29.4, "tasa_desocupacion": 8.7, "quiebre_metodologico": false}
+  ],
+  "changelog": [
+    {"tipo_base": "individual", "periodo": "2016-T2", "comparado_contra": "2016-T1", "tipo_cambio": "columnas", "detalle": "ejemplo ilustrativo - se completa solo", "fecha_deteccion": "2026-01-01 00:00:00"}
+  ],
+  "rupturas_conocidas": [
+    {"periodo": "2016-T2", "descripcion": "Rediseno muestral de la EPH: nuevo marco muestral posterior al Censo 2010, nuevos factores de expansion (PONDERA/PONDIH). Series previas a este trimestre no son directamente comparables sin ajuste."}
+  ]
+}
